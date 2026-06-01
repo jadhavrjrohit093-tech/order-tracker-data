@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Status Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --card: #1a2236;
+    --border: #2a3650;
+    --accent: #00d4aa;
+    --accent2: #4f9eff;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --delivered: #00d4aa;
+    --intransit: #f59e0b;
+    --error: #ef4444;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  header {
+    width: 100%;
+    background: linear-gradient(135deg, #0d1b2e 0%, #0a0e1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-icon {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  header h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header span { color: var(--muted); font-size: 0.82rem; margin-left: auto; }
+  .container {
+    width: 100%;
+    max-width: 700px;
+    padding: 32px 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-window {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    min-height: 420px;
+    max-height: 520px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 16px;
+    scroll-behavior: smooth;
+  }
+  .chat-window::-webkit-scrollbar { width: 5px; }
+  .chat-window::-webkit-scrollbar-track { background: transparent; }
+  .chat-window::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .msg { display: flex; flex-direction: column; gap: 4px; animation: fadeUp 0.25s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .msg.bot { align-items: flex-start; }
+  .msg.user { align-items: flex-end; }
+  .bubble {
+    max-width: 90%;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+  .msg.bot .bubble {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text);
+  }
+  .msg.user .bubble {
+    background: linear-gradient(135deg, #1a3a5c, #0f2a45);
+    border: 1px solid #2a4a6a;
+    border-bottom-right-radius: 4px;
+    color: #a8d4ff;
+  }
+  .order-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-top: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 2px; }
+  .field-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 500; }
+  .field-value { font-family: 'Rajdhani', sans-serif; font-size: 1.05rem; font-weight: 600; color: var(--text); }
+  .field.full-width { grid-column: 1 / -1; }
+  .status-badge { display: inline-block; padding: 3px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; letter-spacing: 0.5px; }
+  .status-delivered { background: rgba(0,212,170,0.12); color: var(--delivered); border: 1px solid rgba(0,212,170,0.3); }
+  .status-intransit { background: rgba(245,158,11,0.12); color: var(--intransit); border: 1px solid rgba(245,158,11,0.3); }
+  .order-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .order-num-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .order-num-val { font-family: 'Rajdhani', sans-serif; font-size: 1.3rem; font-weight: 700; color: var(--accent2); }
+  .input-row { display: flex; gap: 10px; }
+  input[type=text] {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 18px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type=text]:focus { border-color: var(--accent2); }
+  input[type=text]::placeholder { color: var(--muted); }
+  button.send-btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 12px;
+    padding: 13px 22px;
+    color: #0a0e1a;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  button.send-btn:hover { opacity: 0.88; }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+    padding: 8px 4px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .typing { display: flex; gap: 4px; align-items: center; padding: 4px 2px; }
+  .typing span {
+    width: 7px; height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
+  .data-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,170,0.08);
+    border: 1px solid rgba(0,212,170,0.2);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,14,26,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    z-index: 999;
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
+  .loading-spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <span id="loadingText">Loading order data...</span>
+</div>
+
+<header>
+  <div class="logo-icon">📦</div>
+  <h1>ORDER TRACKER</h1>
+  <span id="recordCount">Loading...</span>
+</header>
+
+<div class="container">
+  <div class="chat-window" id="chatWindow"></div>
+  <div class="input-row">
+    <input type="text" id="orderInput" placeholder="Enter Order Number (e.g. 5110487785)" />
+    <button class="send-btn" onclick="handleQuery()">Search</button>
+  </div>
+  <div class="status-bar">
+    <span id="dataStatus" class="data-source-badge">⏳ Loading data...</span>
+    <span id="lastUpdated"></span>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION — Update YOUR_GITHUB_USERNAME & YOUR_REPO_NAME
+// ============================================================
+const GITHUB_USER = 'YOUR_GITHUB_USERNAME';
+const GITHUB_REPO = 'YOUR_REPO_NAME';
+const DATA_FILE   = 'order_data.json';  // file stored in your repo root
+
+// Full raw URL to fetch data from GitHub
+const DATA_URL = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/main/${DATA_FILE}`;
+
+// ============================================================
+let orderData = {};
+
+async function loadData() {
+  const overlay = document.getElementById('loadingOverlay');
+  const loadingText = document.getElementById('loadingText');
+  try {
+    loadingText.textContent = 'Fetching latest order data...';
+    const resp = await fetch(DATA_URL + '?t=' + Date.now()); // cache-bust
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const json = await resp.json();
+    orderData = json.orders || {};
+    const count = Object.keys(orderData).length;
+    document.getElementById('recordCount').textContent = count.toLocaleString() + ' orders loaded';
+    document.getElementById('dataStatus').innerHTML = '✅ Live data · ' + count.toLocaleString() + ' orders';
+    document.getElementById('lastUpdated').textContent = json.last_updated ? 'Updated: ' + json.last_updated : '';
+    overlay.style.display = 'none';
+    addMsg('bot', '👋 <strong>Welcome to Order Tracker!</strong><br><span style="color:var(--muted);">Enter your <b style="color:var(--text)">Order Number</b> to get real-time status, LR details, transporter info, and delivery date.<br><span style="color:var(--accent);font-size:0.85rem;">✅ ' + count.toLocaleString() + ' orders loaded</span></span>');
+  } catch(err) {
+    loadingText.textContent = '❌ Failed to load data. Check your GitHub config.';
+    document.getElementById('dataStatus').innerHTML = '❌ Data load failed';
+    console.error('Data load error:', err);
+    // Still hide overlay after delay so user can see the error message
+    setTimeout(() => { overlay.style.display = 'none'; }, 3000);
+    addMsg('bot', '⚠️ <strong>Could not load order data.</strong><br><span style="color:var(--muted);font-size:0.88rem;">Please check your GitHub configuration or contact your admin.</span>');
+  }
+}
+
+const chatWindow = document.getElementById('chatWindow');
+const input = document.getElementById('orderInput');
+
+function addMsg(type, html) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = html;
+  div.appendChild(bubble);
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  return div;
+}
+
+function showTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg bot'; div.id = 'typing';
+  div.innerHTML = '<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  chatWindow.appendChild(div);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
+
+function getStatusBadge(status) {
+  if (!status || status === 'N/A') return '<span class="status-badge" style="background:rgba(100,116,139,0.15);color:#94a3b8;border:1px solid rgba(100,116,139,0.3);">Unknown</span>';
+  if (status.toLowerCase().includes('deliver')) return '<span class="status-badge status-delivered">✅ ' + status + '</span>';
+  return '<span class="status-badge status-intransit">🚚 ' + status + '</span>';
+}
+
+function renderResult(orderNum, rec) {
+  return `
+    <div class="order-header">
+      <div>
+        <div class="order-num-label">Order Number</div>
+        <div class="order-num-val">${orderNum}</div>
+      </div>
+      ${getStatusBadge(rec.status)}
+    </div>
+    <div class="order-card">
+      <div class="field"><span class="field-label">LR Number</span><span class="field-value">${rec.lr}</span></div>
+      <div class="field"><span class="field-label">LR Date</span><span class="field-value">${rec.lr_date}</span></div>
+      <div class="field full-width"><span class="field-label">Transporter Name</span><span class="field-value">${rec.transporter}</span></div>
+      <div class="field"><span class="field-label">Delivery Date</span><span class="field-value">${rec.delivery_date}</span></div>
+    </div>`;
+}
+
+function handleQuery() {
+  const raw = input.value.trim();
+  if (!raw) return;
+  addMsg('user', '🔍 ' + raw);
+  input.value = '';
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    const key = raw.replace(/\.0$/, '');
+    const rec = orderData[key] || orderData[raw];
+    if (rec) {
+      addMsg('bot', renderResult(key, rec));
+    } else {
+      addMsg('bot', `<strong>Order not found</strong><br><span style="color:var(--muted);font-size:0.88rem;">No record for order <b style="color:var(--accent2)">${raw}</b>. Please verify the number and try again.</span>`);
+    }
+  }, 600);
+}
+
+input.addEventListener('keydown', e => { if (e.key === 'Enter') handleQuery(); });
+
+// Load data on startup
+loadData();
+</script>
+</body>
+</html>
