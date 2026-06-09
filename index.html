@@ -312,6 +312,7 @@ function renderResult(orderNum, rec) {
       <div class="field"><span class="field-label">LR Date</span><span class="field-value">${rec.lr_date}</span></div>
       <div class="field full-width"><span class="field-label">Transporter Name</span><span class="field-value">${rec.transporter}</span></div>
       <div class="field"><span class="field-label">Delivery Date</span><span class="field-value">${rec.delivery_date}</span></div>
+      <div class="field"><span class="field-label">Expected Delivery Date</span><span class="field-value" style="color:var(--accent);">${rec.expected_delivery || 'N/A'}</span></div>
     </div>`;
 }
 
