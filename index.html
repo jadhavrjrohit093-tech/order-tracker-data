@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Status Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0e1a;--surface:#111827;--card:#1a2236;--border:#2a3650;--accent:#00d4aa;--accent2:#4f9eff;--text:#e2e8f0;--muted:#64748b;--delivered:#00d4aa;--intransit:#f59e0b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+header{width:100%;background:linear-gradient(135deg,#0d1b2e,#0a0e1a);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;gap:14px}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px}
+header h1{font-family:'Rajdhani',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:1px;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rec-count{color:var(--muted);font-size:.82rem;margin-left:auto}
+.container{width:100%;max-width:720px;padding:32px 20px;flex:1;display:flex;flex-direction:column}
+.chat-window{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;min-height:420px;max-height:560px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;margin-bottom:16px;scroll-behavior:smooth}
+.msg{display:flex;flex-direction:column;gap:4px;animation:fadeUp .25s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.bot{align-items:flex-start}.msg.user{align-items:flex-end}
+.bubble{max-width:94%;padding:12px 16px;border-radius:14px;font-size:.92rem;line-height:1.55}
+.msg.bot .bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.user .bubble{background:linear-gradient(135deg,#1a3a5c,#0f2a45);border:1px solid #2a4a6a;border-bottom-right-radius:4px;color:#a8d4ff}
+.order-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px}
+.ship-head{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.ship-title{font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:2px;min-width:0}
+.field-label{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:500}
+.field-value{font-family:'Rajdhani',sans-serif;font-size:1.05rem;font-weight:600;overflow-wrap:anywhere}
+.field.full-width{grid-column:1/-1}
+.status-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:.82rem;font-weight:600}
+.status-delivered{background:rgba(0,212,170,.12);color:var(--delivered);border:1px solid rgba(0,212,170,.3)}
+.status-intransit{background:rgba(245,158,11,.12);color:var(--intransit);border:1px solid rgba(245,158,11,.3)}
+.status-unknown{background:rgba(100,116,139,.15);color:#94a3b8;border:1px solid rgba(100,116,139,.3)}
+.order-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:10px}
+.order-num-label{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted)}
+.order-num-val{font-family:'Rajdhani',sans-serif;font-size:1.3rem;font-weight:700;color:var(--accent2)}
+.input-row{display:flex;gap:10px}
+input[type=text]{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 18px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none}
+input[type=text]:focus{border-color:var(--accent2)}
+input[type=text]::placeholder{color:var(--muted)}
+button.send-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:12px;padding:13px 22px;color:#0a0e1a;font-weight:700;font-size:.95rem;cursor:pointer}
+.status-bar{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:8px 4px;font-size:.8rem;color:var(--muted);gap:10px;flex-wrap:wrap}
+.typing{display:flex;gap:4px;padding:4px 2px}
+.typing span{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+.badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,170,.08);border:1px solid rgba(0,212,170,.2);border-radius:20px;padding:4px 12px;font-size:.75rem;color:var(--accent)}
+@media(max-width:520px){.order-card{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">📦</div>
+  <h1>ORDER TRACKER</h1>
+  <span class="rec-count" id="recCount"></span>
+</header>
+<div class="container">
+  <div class="chat-window" id="chatWindow"></div>
+  <div class="input-row">
+    <input type="text" id="orderInput" placeholder="Enter ST/SO Number (e.g. 5110773637)" inputmode="numeric"/>
+    <button class="send-btn" onclick="handleQuery()">Search</button>
+  </div>
+  <div class="status-bar">
+    <span id="dataStatus" class="badge">Ready</span>
+    <span id="lastUpdated"></span>
+  </div>
+</div>
+<script>
+// Data files live in the same site (GitHub Pages) under /chunks/. File = first 6 digits of the order number.
+// This number MUST match CHUNK_LEN in the admin upload tool.
+const PREFIX_LEN = 6;
+let version = '1';
+const cache = {};   // chunks already downloaded stay in memory -> repeat searches are instant
+
+async function init() {
+  try {
+    const r = await fetch('meta.json?t=' + Date.now());
+    if (r.ok) {
+      const m = await r.json();
+      if (m.last_updated) { version = encodeURIComponent(m.last_updated); document.getElementById('lastUpdated').textContent = 'Updated: ' + m.last_updated; }
+      if (m.total_records) document.getElementById('recCount').textContent = Number(m.total_records).toLocaleString() + ' orders';
+    }
+  } catch(e) {}
+  addMsg('bot', '👋 <strong>Welcome to Order Tracker!</strong><br><span style="color:var(--muted)">Enter an <b style="color:var(--text)">ST/SO Number</b> to see shipment status, LR details, transporter and delivery dates.</span>');
+}
+
+async function loadChunk(prefix) {
+  if (cache[prefix]) return cache[prefix];
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 30000);
+  try {
+    const resp = await fetch('chunks/chunk_' + prefix + '.json?v=' + version, { signal: ctrl.signal });
+    if (resp.status === 404) { cache[prefix] = {}; return cache[prefix]; }
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    cache[prefix] = await resp.json();
+    return cache[prefix];
+  } finally { clearTimeout(timer); }
+}
+
+const chatWindow = document.getElementById('chatWindow');
+const input = document.getElementById('orderInput');
+
+function esc(v) {
+  return String(v === undefined || v === null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function addMsg(type, html) {
+  const div = document.createElement('div'); div.className = 'msg ' + type;
+  const b = document.createElement('div'); b.className = 'bubble'; b.innerHTML = html;
+  div.appendChild(b); chatWindow.appendChild(div); chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+function showTyping() {
+  const d = document.createElement('div'); d.className = 'msg bot'; d.id = 'typing';
+  d.innerHTML = '<div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>';
+  chatWindow.appendChild(d); chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+function removeTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+function badge(s) {
+  if (!s || s === 'N/A') return '<span class="status-badge status-unknown">Unknown</span>';
+  if (String(s).toLowerCase().includes('deliver')) return '<span class="status-badge status-delivered">✅ ' + esc(s) + '</span>';
+  return '<span class="status-badge status-intransit">🚚 ' + esc(s) + '</span>';
+}
+
+// Old-format record (single object) or new-format (list of shipments) -> always a list, latest LR date first
+function toShipments(rec) {
+  const list = Array.isArray(rec) ? rec.slice() : (rec ? [rec] : []);
+  const ts = x => { const t = Date.parse(String(x && x.lr_date || '').replace(/-/g, ' ')); return isNaN(t) ? 0 : t; };
+  return list.sort((a, b) => ts(b) - ts(a));
+}
+
+function field(label, value, extra) {
+  return '<div class="field' + (extra ? ' ' + extra : '') + '"><span class="field-label">' + label + '</span><span class="field-value">' + esc(value || 'N/A') + '</span></div>';
+}
+
+function renderShipment(s, i, n) {
+  let h = '<div class="order-card">';
+  if (n > 1) h += '<div class="ship-head"><span class="ship-title">Shipment ' + (i + 1) + ' of ' + n + '</span>' + badge(s.status) + '</div>';
+  if (s.trip_id)      h += field('Trip ID', s.trip_id);
+  if (s.plant)        h += field('Issuing Plant', s.plant);
+  if (s.billing_doc)  h += field('GI/Billing Doc No.', s.billing_doc);
+  if (s.billing_date) h += field('GI/Billing Doc Date', s.billing_date);
+  h += field('LR Number', s.lr) + field('LR Date', s.lr_date);
+  h += field('Transporter Name', s.transporter, 'full-width');
+  h += field('Actual Delivery Date', s.delivery_date);
+  h += '<div class="field"><span class="field-label">Expected Delivery Date</span><span class="field-value" style="color:var(--accent)">' + esc(s.expected_delivery || 'N/A') + '</span></div>';
+  return h + '</div>';
+}
+
+function renderResult(key, rec) {
+  const ships = toShipments(rec);
+  const right = ships.length === 1 ? badge(ships[0].status) : '<span class="status-badge status-unknown">' + ships.length + ' shipments</span>';
+  let h = '<div class="order-header"><div><div class="order-num-label">ST/SO Number</div><div class="order-num-val">' + esc(key) + '</div></div>' + right + '</div>';
+  ships.forEach((s, i) => { h += renderShipment(s, i, ships.length); });
+  return h;
+}
+
+async function handleQuery() {
+  const raw = input.value.trim();
+  if (!raw) return;
+  const key = raw.replace(/\.0$/, '').trim();
+  addMsg('user', '🔍 ' + esc(raw));
+  input.value = '';
+  showTyping();
+  const status = document.getElementById('dataStatus');
+  status.textContent = '⏳ Searching...';
+  const t0 = performance.now();
+  try {
+    const chunk = await loadChunk(key.substring(0, PREFIX_LEN));
+    const rec = chunk[key];
+    removeTyping();
+    if (rec) addMsg('bot', renderResult(key, rec));
+    else addMsg('bot', '<strong>Order not found</strong><br><span style="color:var(--muted);font-size:.88rem;">No record for <b style="color:var(--accent2)">' + esc(key) + '</b>. Please verify the number.</span>');
+    status.textContent = '✅ Done in ' + ((performance.now() - t0) / 1000).toFixed(1) + 's';
+  } catch (err) {
+    removeTyping();
+    const why = err.name === 'AbortError' ? 'Download timed out after 30 seconds' : err.message;
+    addMsg('bot', '⚠️ <strong>Search failed</strong><br><span style="color:var(--muted);font-size:.88rem;">' + esc(why) + '. Please try again.</span>');
+    status.textContent = '❌ ' + why;
+  }
+}
+input.addEventListener('keydown', e => { if (e.key === 'Enter') handleQuery(); });
+init();
+</script>
+</body>
+</html>
